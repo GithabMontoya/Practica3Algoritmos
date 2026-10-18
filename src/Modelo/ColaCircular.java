@@ -1,3 +1,5 @@
+package Modelo;
+
 public class ColaCircular<T> {
     private T[] datos;
     private int inicio, fin, cantidad;

@@ -1,4 +1,4 @@
-package com.example.practica3algoritmos.Modelo;
+package Modelo;
 
 import java.util.Random;
 
