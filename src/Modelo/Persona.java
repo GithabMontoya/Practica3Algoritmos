@@ -6,6 +6,7 @@ public class Persona {
 
     public Persona(int entrada) {
         this.entrada = entrada;
+        salida = -1;
     }
 
     public int getEntrada(){
@@ -16,9 +17,15 @@ public class Persona {
         return salida;
     }
 
-    public void setSalida(int){
+    public void setSalida(int salida){
         this.salida = salida;
     }
 
+    public boolean personaBase(){
+        return entrada == 0;
+    }
 
+    public String toString(){
+        return "Persona entró en la ronda " + entrada + " y salió en la ronda " + salida ;
+    }
 }
