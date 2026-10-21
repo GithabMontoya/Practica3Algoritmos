@@ -53,9 +53,24 @@ public class Jugador {
         dados.add(dadoAgregar);
     }
 
+    public int getValorDados(){
+        int total = 0;
+        for(Dado dado: dados){
+            total += dado.getValor();
+        }
+        return total;
+    }
+
+    public void AgregarJugada(int valorDado){
+        historialDados.add(valorDado);
+    }
+
     // Falta de probar...
     public Dado eliminarDado(Dado dadoEliminar){
         return dados.remove(dados.size());
     }
+
+
+
 
 }
