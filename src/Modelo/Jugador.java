@@ -66,11 +66,13 @@ public class Jugador {
     }
 
     // Falta de probar...
-    public Dado eliminarDado(Dado dadoEliminar){
-        return dados.remove(dados.size());
+    public boolean eliminarDado(Dado dadoEliminar){
+        return dados.remove(dadoEliminar);
     }
 
-
+    public boolean esFuente(){
+        return numeroJugador == 1;
+    }
 
 
 }

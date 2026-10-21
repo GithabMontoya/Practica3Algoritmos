@@ -36,5 +36,30 @@ public class DiceGame {
         }
     }
 
+    public boolean moverDado(Dado dado, Jugador origen, Jugador destino){
+        if(origen == destino || dado == null) return false;
+        if(!origen.eliminarDado(dado)) return false;
+        destino.agregarDado(dado);
+        return true;
+    }
 
+    public ArrayList<Jugador> getJugadores() {
+        return jugadores;
+    }
+
+    public int getRondaActual() {
+        return rondaActual;
+    }
+    public ArrayList<Persona> getPersonasFinal() {
+        return personasFinal;
+    }
+
+    public void entregarPersonas(Persona persona, Jugador siguiente){
+        if (siguiente == null){
+            persona.setSalida(rondaActual);
+            personasFinal.add(persona);
+        } else {
+            siguiente.getPersonas().insertarCircular(persona);
+        }
+    }
 }
