@@ -5,12 +5,16 @@ import com.example.practica3algoritmosgui.Modelo.DiceGame;
 import com.example.practica3algoritmosgui.Modelo.Jugador;
 import com.example.practica3algoritmosgui.Modelo.Persona;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
@@ -41,9 +45,11 @@ public class VentanaJuego {
     private final Label lblThroughput = new Label();
     private final Label lblWip = new Label();
     private final Label lblMensaje = new Label();
+    private final Label lblSalida = new Label("Salida: 0 personas");
     private final Button btnAccion = new Button("Tirar dados");
     private final Button btnReiniciar = new Button("Reiniciar juego");
     private final GridPane tablero = new GridPane();
+    private final FlowPane zonaSalida = new FlowPane(3, 3);
 
     private Runnable alAccion = () -> { };
     private Runnable alReiniciar = () -> { };
@@ -84,6 +90,19 @@ public class VentanaJuego {
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
 
+        zonaSalida.setPadding(new Insets(6));
+        ScrollPane scrollSalida = new ScrollPane(zonaSalida);
+        scrollSalida.setFitToWidth(true);
+        lblSalida.setStyle("-fx-font-weight: bold;");
+
+        VBox panelSalida = new VBox(4, lblSalida, scrollSalida);
+        panelSalida.setPadding(new Insets(0, 10, 10, 10));
+        VBox.setVgrow(scrollSalida, Priority.ALWAYS);
+
+        SplitPane centro = new SplitPane(scroll, panelSalida);
+        centro.setOrientation(Orientation.VERTICAL);
+        centro.setDividerPositions(0.72);
+
         Region espacio = new Region();
         HBox.setHgrow(espacio, Priority.ALWAYS);
         btnReiniciar.setVisible(false);
@@ -97,7 +116,7 @@ public class VentanaJuego {
 
         BorderPane raiz = new BorderPane();
         raiz.setTop(superior);
-        raiz.setCenter(scroll);
+        raiz.setCenter(centro);
         raiz.setBottom(inferior);
 
         stage.setTitle("Juego de dados - Línea de producción");
@@ -135,6 +154,7 @@ public class VentanaJuego {
             tablero.add(crearPanelJugador(jugadores.get(i), dadoSeleccionado),
                     i % columnas, i / columnas);
         }
+        actualizarSalida(juego);
     }
 
     private VBox crearPanelJugador(Jugador j, Dado dadoSeleccionado) {
@@ -223,6 +243,23 @@ public class VentanaJuego {
         }
         if (total > dibujar) {
             cola.getChildren().add(new Label("+" + (total - dibujar)));
+        }
+    }
+
+    private void actualizarSalida(DiceGame juego) {
+        zonaSalida.getChildren().clear();
+        List<Persona> salidas = juego.getPersonasFinal();
+        lblSalida.setText("Salida: " + salidas.size() + " personas");
+
+        for (Persona p : salidas) {
+            Node ficha;
+            if (p.personaBase()) {
+                ficha = new Rectangle(11, 11, Color.STEELBLUE);
+            } else {
+                ficha = new Circle(5.5, Color.SEAGREEN);
+            }
+            Tooltip.install(ficha, new Tooltip(p.toString())); // entrada y salida al pasar el mouse
+            zonaSalida.getChildren().add(ficha);
         }
     }
 }
