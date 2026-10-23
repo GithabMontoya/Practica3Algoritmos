@@ -53,4 +53,15 @@ public class ColaCircular<T> {
         }
     }
 
+    public int tamanoCola() {
+        return cantidad;
+    }
+
+    public void vaciar() {
+        datos = (T[]) new Object[datos.length];
+        inicio = -1;
+        fin = -1;
+        cantidad = 0;
+    }
+
 }
