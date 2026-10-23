@@ -10,10 +10,17 @@ import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -31,7 +38,10 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -48,8 +58,15 @@ public class VentanaJuego {
     private final Label lblSalida = new Label("Salida: 0 personas");
     private final Button btnAccion = new Button("Tirar dados");
     private final Button btnReiniciar = new Button("Reiniciar juego");
+    private final Button btnGraficas = new Button("Mostrar gráficas");
     private final GridPane tablero = new GridPane();
     private final FlowPane zonaSalida = new FlowPane(3, 3);
+    private final TabPane panelGraficas = new TabPane();
+
+    private LineChart<Number, Number> graficaThroughput;
+    private LineChart<Number, Number> graficaWip;
+    private BarChart<String, Number> graficaActividad;
+    private BarChart<String, Number> graficaTiempo;
 
     private Runnable alAccion = () -> { };
     private Runnable alReiniciar = () -> { };
@@ -103,21 +120,30 @@ public class VentanaJuego {
         centro.setOrientation(Orientation.VERTICAL);
         centro.setDividerPositions(0.72);
 
+        construirGraficas();
+        panelGraficas.setMinWidth(0);
+        panelGraficas.setVisible(false);
+        panelGraficas.setManaged(false);
+
         Region espacio = new Region();
         HBox.setHgrow(espacio, Priority.ALWAYS);
         btnReiniciar.setVisible(false);
         btnReiniciar.setManaged(false);
-        HBox inferior = new HBox(15, lblMensaje, espacio, btnAccion, btnReiniciar);
+        HBox inferior = new HBox(15, lblMensaje, espacio, btnGraficas, btnAccion, btnReiniciar);
         inferior.setPadding(new Insets(10));
         inferior.setAlignment(Pos.CENTER_LEFT);
 
         btnAccion.setOnAction(e -> alAccion.run());
         btnReiniciar.setOnAction(e -> alReiniciar.run());
+        btnGraficas.setOnAction(e -> alternarGraficas());
 
         BorderPane raiz = new BorderPane();
         raiz.setTop(superior);
         raiz.setCenter(centro);
+        raiz.setRight(panelGraficas);
         raiz.setBottom(inferior);
+
+        panelGraficas.prefWidthProperty().bind(raiz.widthProperty().multiply(0.35));
 
         stage.setTitle("Juego de dados - Línea de producción");
         stage.setScene(new Scene(raiz, 1200, 800));
@@ -155,6 +181,7 @@ public class VentanaJuego {
                     i % columnas, i / columnas);
         }
         actualizarSalida(juego);
+        actualizarGraficas(juego);
     }
 
     private VBox crearPanelJugador(Jugador j, Dado dadoSeleccionado) {
@@ -261,5 +288,98 @@ public class VentanaJuego {
             Tooltip.install(ficha, new Tooltip(p.toString())); // entrada y salida al pasar el mouse
             zonaSalida.getChildren().add(ficha);
         }
+    }
+
+    private void construirGraficas() {
+        graficaThroughput = crearLinea("Throughput (personas que han salido)", "Personas", 20);
+        graficaWip = crearLinea("Personas en el sistema", "Personas", 20);
+
+        graficaActividad = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        graficaActividad.setTitle("Actividad: dado vs personas movidas");
+        graficaActividad.setAnimated(false);
+
+        graficaTiempo = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        graficaTiempo.setTitle("Tiempo en sistema");
+        graficaTiempo.getXAxis().setLabel("Rondas en el sistema");
+        graficaTiempo.getYAxis().setLabel("Personas");
+        graficaTiempo.setAnimated(false);
+        graficaTiempo.setLegendVisible(false);
+
+        panelGraficas.getTabs().addAll(
+                new Tab("Throughput", graficaThroughput),
+                new Tab("En sistema", graficaWip),
+                new Tab("Actividad", graficaActividad),
+                new Tab("Tiempo", graficaTiempo));
+        panelGraficas.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+    }
+
+    private LineChart<Number, Number> crearLinea(String titulo, String ejeY, int rondas) {
+        NumberAxis x = new NumberAxis(0, rondas, 2);
+        x.setLabel("Ronda");
+        NumberAxis y = new NumberAxis();
+        y.setLabel(ejeY);
+        LineChart<Number, Number> g = new LineChart<>(x, y);
+        g.setTitle(titulo);
+        g.setAnimated(false);
+        g.setLegendVisible(false);
+        return g;
+    }
+
+    private void alternarGraficas() {
+        boolean mostrar = !panelGraficas.isVisible();
+        panelGraficas.setVisible(mostrar);
+        panelGraficas.setManaged(mostrar);
+        btnGraficas.setText(mostrar ? "Ocultar gráficas" : "Mostrar gráficas");
+    }
+
+    private void actualizarGraficas(DiceGame juego) {
+        llenarLinea(graficaThroughput, juego.getHistorialThroughput(), 1);
+        llenarLinea(graficaWip, juego.getHistorialPersonasEnSistema(), 0);
+        llenarActividad(juego);
+        llenarTiempo(juego);
+    }
+
+    private void llenarLinea(LineChart<Number, Number> g, List<Integer> datos, int rondaInicial) {
+        XYChart.Series<Number, Number> serie = new XYChart.Series<>();
+        for (int i = 0; i < datos.size(); i++) {
+            serie.getData().add(new XYChart.Data<>(rondaInicial + i, datos.get(i)));
+        }
+        g.getData().clear();
+        g.getData().add(serie);
+    }
+
+    private void llenarActividad(DiceGame juego) {
+        XYChart.Series<String, Number> dados = new XYChart.Series<>();
+        dados.setName("Valor del dado");
+        XYChart.Series<String, Number> movidas = new XYChart.Series<>();
+        movidas.setName("Personas movidas");
+
+        for (Jugador j : juego.getJugadores()) {
+            String etiqueta = "J" + j.getNumeroJugador();
+            dados.getData().add(new XYChart.Data<>(etiqueta, suma(j.getHistorialDados())));
+            movidas.getData().add(new XYChart.Data<>(etiqueta, suma(j.getHistorialPersonas())));
+        }
+        graficaActividad.getData().clear();
+        graficaActividad.getData().add(dados);
+        graficaActividad.getData().add(movidas);
+    }
+
+    private void llenarTiempo(DiceGame juego) {
+        Map<Integer, Integer> conteo = new TreeMap<>();
+        for (int t : new ArrayList<>(juego.getTiemposEnSistema())) {
+            conteo.merge(t, 1, Integer::sum);
+        }
+        XYChart.Series<String, Number> serie = new XYChart.Series<>();
+        for (Map.Entry<Integer, Integer> e : conteo.entrySet()) {
+            serie.getData().add(new XYChart.Data<>(String.valueOf(e.getKey()), e.getValue()));
+        }
+        graficaTiempo.getData().clear();
+        graficaTiempo.getData().add(serie);
+    }
+
+    private int suma(List<Integer> lista) {
+        int total = 0;
+        for (int v : lista) total += v;
+        return total;
     }
 }
