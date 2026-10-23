@@ -11,9 +11,15 @@ public class DiceGame {
     public ArrayList<Jugador> jugadores;
     public ArrayList<Persona> personasFinal;
 
+    // NUEVO: historiales para las gráficas
+    public ArrayList<Integer> historialThroughput;
+    public ArrayList<Integer> historialPersonasEnSistema;
+
     public DiceGame (){
         jugadores = new ArrayList<>();
         personasFinal = new ArrayList<>();
+        historialThroughput = new ArrayList<>();          // NUEVO
+        historialPersonasEnSistema = new ArrayList<>();   // NUEVO
         for(int i = 1; i <= num_jugadores; i++){
             jugadores.add(new Jugador(i));
         }
@@ -26,6 +32,8 @@ public class DiceGame {
                 j.getPersonas().insertarCircular(new Persona(0));
             }
         }
+        // NUEVO: punto de partida de la gráfica de personas en el sistema
+        historialPersonasEnSistema.add(calcularPersonasEnElSistema());
     }
 
     public void lanzarDados(){
@@ -61,5 +69,47 @@ public class DiceGame {
         } else {
             siguiente.getPersonas().insertarCircular(persona);
         }
+    }
+
+    public void reiniciarJuego(){
+        rondaActual = 0;
+        personasFinal.clear();
+        historialThroughput.clear();
+        historialPersonasEnSistema.clear();
+
+        for(Jugador j : jugadores){
+            j.reiniciarJugador();
+        }
+        agregarPersonasIniciales();
+    }
+
+    public int calcularThroughput(){
+        return personasFinal.size();
+    }
+
+    public int calcularPersonasEnElSistema(){
+        int total = 0;
+        for(Jugador j : jugadores){
+            if(!j.esFuente()) total += j.getCantidadPersonas();
+        }
+        return total;
+    }
+
+    public ArrayList<Integer> getHistorialThroughput(){
+        return historialThroughput;
+    }
+
+    public ArrayList<Integer> getHistorialPersonasEnSistema(){
+        return historialPersonasEnSistema;
+    }
+
+    public ArrayList<Integer> getTiemposEnSistema(){
+        ArrayList<Integer> tiempos = new ArrayList<>();
+        for(Persona p : personasFinal){
+            if(!p.personaBase()){
+                tiempos.add(p.getSalida() - p.getEntrada());
+            }
+        }
+        return tiempos;
     }
 }
