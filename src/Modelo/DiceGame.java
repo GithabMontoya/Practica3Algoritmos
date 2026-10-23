@@ -71,6 +71,44 @@ public class DiceGame {
         }
     }
 
+    public void moverPersonas(){
+        rondaActual++;
+
+        for(int i = jugadores.size() - 1; i >= 0; i--){
+            Jugador actual = jugadores.get(i);
+            Jugador siguiente = (i < jugadores.size() - 1) ? jugadores.get(i + 1) : null;
+
+            int valorDado = actual.getValorDados();
+            int aMover = calcularMovimiento(actual, siguiente, valorDado);
+
+            for(int k = 0; k < aMover; k++){
+                entregarPersonas(tomarPersona(actual), siguiente);
+            }
+
+            actual.registrarActividad(valorDado, aMover);
+        }
+
+        historialThroughput.add(calcularThroughput());
+        historialPersonasEnSistema.add(calcularPersonasEnElSistema());
+    }
+
+    private int calcularMovimiento(Jugador actual, Jugador siguiente, int valorDado){
+        int mueve = valorDado;
+
+        if(!actual.esFuente() && actual.getCantidadPersonas() < mueve){
+            mueve = actual.getCantidadPersonas();
+        }
+        if(siguiente != null && siguiente.espacioLibre() < mueve){
+            mueve = siguiente.espacioLibre();
+        }
+        return mueve;
+    }
+
+    private Persona tomarPersona(Jugador j){
+        if(j.esFuente()) return new Persona(rondaActual);
+        return j.getPersonas().eliminarCircular();
+    }
+
     public void reiniciarJuego(){
         rondaActual = 0;
         personasFinal.clear();
@@ -83,16 +121,16 @@ public class DiceGame {
         agregarPersonasIniciales();
     }
 
-    public int calcularThroughput(){
-        return personasFinal.size();
-    }
-
     public int calcularPersonasEnElSistema(){
         int total = 0;
         for(Jugador j : jugadores){
             if(!j.esFuente()) total += j.getCantidadPersonas();
         }
         return total;
+    }
+
+    public int calcularThroughput(){
+        return personasFinal.size();
     }
 
     public ArrayList<Integer> getHistorialThroughput(){

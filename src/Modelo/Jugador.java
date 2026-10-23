@@ -3,6 +3,7 @@ package Modelo;
 import java.util.ArrayList;
 
 public class Jugador {
+    public static final int CAPACIDAD_COLA = 300;
 
     // Variables enteras
     private int numeroJugador;
@@ -102,6 +103,11 @@ public class Jugador {
         return colaPersonas.tamanoCola();
     }
 
+    public int espacioLibre(){
+        if (esFuente()) return Integer.MAX_VALUE;
+        return CAPACIDAD_COLA - colaPersonas.tamanoCola();
+    }
+
     public void reiniciarJugador(){
         historialDados.clear();
         historialPersonas.clear();
@@ -110,4 +116,5 @@ public class Jugador {
         dados.add(dadoJugador); // el dado vuelve a su dueño
         personasMovidasEnRondaAnterior = 0;
     }
+
 }
