@@ -3,6 +3,7 @@ package com.example.practica3algoritmosgui.Vista;
 import com.example.practica3algoritmosgui.Modelo.Dado;
 import com.example.practica3algoritmosgui.Modelo.DiceGame;
 import com.example.practica3algoritmosgui.Modelo.Jugador;
+import com.example.practica3algoritmosgui.Modelo.Persona;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -12,12 +13,17 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -28,6 +34,7 @@ import java.util.function.Consumer;
 public class VentanaJuego {
     private int columnas = 5;
     private int filas = 2;
+    private int maxFichasDibujadas = 45;
 
     private final Stage stage;
     private final Label lblRonda = new Label();
@@ -125,26 +132,39 @@ public class VentanaJuego {
         tablero.getChildren().clear();
         List<Jugador> jugadores = juego.getJugadores();
         for (int i = 0; i < jugadores.size(); i++) {
-            tablero.add(crearPanelJugador(jugadores.get(i)),
+            tablero.add(crearPanelJugador(jugadores.get(i), dadoSeleccionado),
                     i % columnas, i / columnas);
         }
     }
 
-    private VBox crearPanelJugador(Jugador j) {
+    private VBox crearPanelJugador(Jugador j, Dado dadoSeleccionado) {
         Label titulo = new Label("Jugador " + j.getNumeroJugador());
         titulo.setFont(Font.font(15));
         titulo.setStyle("-fx-font-weight: bold;");
 
+        FlowPane dados = new FlowPane(6, 6); // si no caben, saltan de línea
+        dados.setAlignment(Pos.CENTER_LEFT);
+        if (j.getDadosActuales().isEmpty()) {
+            dados.getChildren().add(crearRanuraVacia());
+        } else {
+            for (Dado d : j.getDadosActuales()) {
+                dados.getChildren().add(crearDado(j, d, d == dadoSeleccionado));
+            }
+        }
+
         Label info;
+        FlowPane cola = new FlowPane(3, 3); // se ajusta al ancho real del panel
+        cola.setPrefWrapLength(100);
         if (j.esFuente()) {
             info = new Label("Persona fuente");
         } else {
             info = new Label("En cola: " + j.getCantidadPersonas()
                     + " | Movió: " + j.getPersonasMovidasEnRondaAnterior());
+            llenarCola(cola, j);
         }
         info.setWrapText(true);
 
-        VBox panel = new VBox(8, titulo, info);
+        VBox panel = new VBox(8, titulo, dados, info, cola);
         panel.setPadding(new Insets(8));
         panel.setMinWidth(0);
         panel.setMaxWidth(Double.MAX_VALUE);
@@ -156,5 +176,53 @@ public class VentanaJuego {
         GridPane.setHgrow(panel, Priority.ALWAYS);
         GridPane.setVgrow(panel, Priority.ALWAYS);
         return panel;
+    }
+
+    private StackPane crearDado(Jugador j, Dado d, boolean seleccionado) {
+        Rectangle fondo = new Rectangle(36, 36);
+        fondo.setArcWidth(10);
+        fondo.setArcHeight(10);
+        fondo.setFill(seleccionado ? Color.GOLD : Color.WHITE);
+        fondo.setStroke(seleccionado ? Color.DARKORANGE : Color.DARKSLATEGRAY);
+        fondo.setStrokeWidth(seleccionado ? 3 : 1.5);
+
+        Label valor = new Label(String.valueOf(d.getValor()));
+        valor.setFont(Font.font(16));
+        valor.setStyle("-fx-font-weight: bold;");
+
+        StackPane dado = new StackPane(fondo, valor);
+        dado.setCursor(Cursor.HAND);
+        dado.setOnMouseClicked(e -> {
+            alClickDado.accept(j, d);
+            e.consume();
+        });
+        return dado;
+    }
+
+    private StackPane crearRanuraVacia() {
+        Rectangle ranura = new Rectangle(36, 36);
+        ranura.setArcWidth(10);
+        ranura.setArcHeight(10);
+        ranura.setFill(Color.TRANSPARENT);
+        ranura.setStroke(Color.GRAY);
+        ranura.getStrokeDashArray().addAll(5.0, 4.0);
+        return new StackPane(ranura);
+    }
+
+    private void llenarCola(FlowPane cola, Jugador j) {
+        int total = j.getCantidadPersonas();
+        int dibujar = Math.min(total, maxFichasDibujadas);
+        for (int i = 0; i < dibujar; i++) {
+            Persona p = j.getPersonaEn(i);
+            if (p == null) continue;
+            if (p.personaBase()) {
+                cola.getChildren().add(new Rectangle(11, 11, Color.STEELBLUE));
+            } else {
+                cola.getChildren().add(new Circle(5.5, Color.SEAGREEN));
+            }
+        }
+        if (total > dibujar) {
+            cola.getChildren().add(new Label("+" + (total - dibujar)));
+        }
     }
 }
